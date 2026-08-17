@@ -40,3 +40,12 @@ The approval, decline and no-target denial paths have also been exercised manual
 The planner does not yet model richer relationships between observations, findings, evidence and completed actions. Expanding structured state and introducing explicitly registered bounded capabilities remain part of the Phase 0.2 work.
 
 Execution remains simulated in Phase 0.1.
+
+
+## Architectural Direction Beyond Phase 0
+
+Phase 0 deliberately keeps model routing, long-term memory and Frontier integration outside the prototype control loop. The accepted Project Sentinel architecture now defines three logical reasoning tiers: **Local Fast**, **Local Reasoning** and optional **Frontier**.
+
+These will be introduced behind stable interfaces after the deterministic runtime, structured state and capability registry have been validated. Frontier use will be treated as controlled data egress and will not imply web, lab, tool or vault access. Model responses will be processed by Sentinel before any material is promoted into persistent memory or reusable knowledge.
+
+This boundary preserves the purpose of Phase 0: prove that Sentinel controls state, policy and execution independently of whichever reasoning model is later attached.

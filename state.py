@@ -1,15 +1,14 @@
 from dataclasses import dataclass, field
-from typing import List
 
 
 @dataclass
 class EngagementState:
     target: str
     phase: str = "enumeration"
-    observations: List[str] = field(default_factory=list)
-    findings: List[str] = field(default_factory=list)
-    actions_completed: List[str] = field(default_factory=list)
-    evidence: List[str] = field(default_factory=list)
+    observations: list[str] = field(default_factory=list)
+    findings: list[str] = field(default_factory=list)
+    actions_completed: list[str] = field(default_factory=list)
+    evidence: list[str] = field(default_factory=list)
 
     def add_observation(self, observation: str) -> None:
         self.observations.append(observation)
