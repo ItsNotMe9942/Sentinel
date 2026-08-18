@@ -14,6 +14,12 @@ Sentinel is being built incrementally as both a practical security tool and an e
 
 Sentinel is also intended to reduce the cognitive overhead surrounding technical work. It should help maintain context, surface relevant knowledge and methodology, organise evidence, and support documentation as part of the workflow so that the operator can devote more attention to reasoning about the problem itself.
 
+## Architecture
+
+![Project Sentinel architecture](docs/images/sentinel-architecture.png)
+
+> **Architecture status:** This diagram represents both the current Phase 0 implementation and accepted architectural direction. Status indicators distinguish implemented prototype behaviour from components and capabilities that remain planned or staged for later phases.
+
 ## Why Sentinel?
 
 Modern AI systems can generate commands, analyse output and propose attack paths remarkably well. But capability alone isn't enough for a system operating around security tooling.
