@@ -12,6 +12,8 @@ The project separates reasoning from execution through explicit policy, state an
 
 Sentinel is being built incrementally as both a practical security tool and an exploration of how AI can be integrated into cybersecurity workflows without turning the operator into a passenger.
 
+Sentinel is also intended to reduce the cognitive overhead surrounding technical work. It should help maintain context, surface relevant knowledge and methodology, organise evidence, and support documentation as part of the workflow so that the operator can devote more attention to reasoning about the problem itself.
+
 ## Why Sentinel?
 
 Modern AI systems can generate commands, analyse output and propose attack paths remarkably well. But capability alone isn't enough for a system operating around security tooling.
