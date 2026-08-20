@@ -33,5 +33,5 @@ class PolicyEngine:
 
         return PolicyResult(
             PolicyDecision.REQUIRE_APPROVAL,
-            "Phase 0.1 requires operator approval before simulated execution.",
+            "Operator approval is required before simulated execution.",
         )

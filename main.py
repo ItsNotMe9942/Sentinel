@@ -1,16 +1,30 @@
+from observation_parser import parse_observation
 from runtime import SentinelRuntime
 from state import EngagementState
 
 
 def main() -> None:
-    print("Project Sentinel — Phase 0.1: Minimal Control Loop")
+    print("Project Sentinel — Phase 0.2: Structured State")
 
     target = input("Target: ").strip()
+
+    if not target:
+        print("Target cannot be empty.")
+        return
+
     state = EngagementState(target=target)
 
     print("\nPaste one observation.")
-    print("Example: 22/tcp open ssh, 80/tcp open http")
-    observation = input("> ").strip()
+    print("Example: 80/tcp open http")
+
+    raw_observation = input("> ")
+
+    try:
+        observation = parse_observation(raw_observation)
+    except ValueError as error:
+        print(f"Invalid observation: {error}")
+        return
+
     state.add_observation(observation)
 
     SentinelRuntime().step(state)

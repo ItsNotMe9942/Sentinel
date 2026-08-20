@@ -2,14 +2,21 @@ import unittest
 from unittest.mock import patch
 
 from runtime import SentinelRuntime
-from state import EngagementState
+from state import EngagementState, Observation
 
 
 class RuntimeTests(unittest.TestCase):
     @patch("builtins.input", return_value="y")
     def test_approved_action_is_recorded(self, mock_input):
         state = EngagementState(target="10.10.10.10")
-        state.add_observation("80/tcp open http")
+        state.add_observation(
+            Observation(
+                description="80/tcp open http",
+                service="http",
+                port=80,
+                protocol="tcp",
+            )
+        )
 
         runtime = SentinelRuntime()
         runtime.step(state)
@@ -19,7 +26,14 @@ class RuntimeTests(unittest.TestCase):
     @patch("builtins.input", return_value="n")
     def test_declined_action_is_not_recorded(self, mock_input):
         state = EngagementState(target="10.10.10.10")
-        state.add_observation("80/tcp open http")
+        state.add_observation(
+            Observation(
+                description="80/tcp open http",
+                service="http",
+                port=80,
+                protocol="tcp",
+            )
+        )
 
         runtime = SentinelRuntime()
         runtime.step(state)
@@ -29,7 +43,14 @@ class RuntimeTests(unittest.TestCase):
     @patch("builtins.input")
     def test_denied_action_does_not_prompt_or_record(self, mock_input):
         state = EngagementState(target="")
-        state.add_observation("80/tcp open http")
+        state.add_observation(
+            Observation(
+                description="80/tcp open http",
+                service="http",
+                port=80,
+                protocol="tcp",
+            )
+        )
 
         runtime = SentinelRuntime()
         runtime.step(state)
