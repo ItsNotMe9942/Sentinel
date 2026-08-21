@@ -4,9 +4,13 @@ from state import EngagementState
 
 class RuleBasedPlanner:
     def next_action(self, state: EngagementState) -> ProposedAction:
-        text = " ".join(state.observations).lower()
+        http_observed = any(
+            observation.service is not None
+            and observation.service.lower() in {"http", "https"}
+            for observation in state.observations
+        )
 
-        if ("80/tcp" in text or "http" in text) and "enumerate_http" not in state.actions_completed:
+        if http_observed and "enumerate_http" not in state.actions_completed:
             return ProposedAction(
                 name="enumerate_http",
                 reason="An HTTP service has been observed and has not yet been enumerated.",

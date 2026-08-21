@@ -1,12 +1,15 @@
+from capabilities import build_default_registry
+from capability_registry import CapabilityRegistry
 from planner import RuleBasedPlanner
 from policy import PolicyDecision, PolicyEngine
 from state import EngagementState
 
 
 class SentinelRuntime:
-    def __init__(self) -> None:
+    def __init__(self, registry: CapabilityRegistry | None = None) -> None:
         self.planner = RuleBasedPlanner()
         self.policy = PolicyEngine()
+        self.registry = registry if registry is not None else build_default_registry()
 
     def step(self, state: EngagementState) -> None:
         action = self.planner.next_action(state)
@@ -30,6 +33,12 @@ class SentinelRuntime:
             print("Operator declined action.")
             return
 
-        print(f"[SIMULATED] Executing: {action.name}")
+        try:
+            capability = self.registry.resolve(action.name)
+        except KeyError:
+            print(f"Capability unavailable: {action.name}")
+            return
+
+        capability.execute(state)
         state.record_action(action.name)
         print("Action recorded.")

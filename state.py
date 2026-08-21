@@ -2,15 +2,23 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class Observation:
+    description: str
+    service: str | None = None
+    port: int | None = None
+    protocol: str | None = None
+
+
+@dataclass
 class EngagementState:
     target: str
     phase: str = "enumeration"
-    observations: list[str] = field(default_factory=list)
+    observations: list[Observation] = field(default_factory=list)
     findings: list[str] = field(default_factory=list)
     actions_completed: list[str] = field(default_factory=list)
     evidence: list[str] = field(default_factory=list)
 
-    def add_observation(self, observation: str) -> None:
+    def add_observation(self, observation: Observation) -> None:
         self.observations.append(observation)
 
     def record_action(self, action_name: str) -> None:
