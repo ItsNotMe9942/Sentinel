@@ -4,7 +4,7 @@ from state import EngagementState
 
 
 def main() -> None:
-    print("Project Sentinel — Phase 0.2: Structured State")
+    print("Project Sentinel — Phase 0.2: Structured State and Capability Registry")
 
     target = input("Target: ").strip()
 
