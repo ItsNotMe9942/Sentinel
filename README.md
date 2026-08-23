@@ -2,460 +2,732 @@
 
 **Human-led. AI-assisted. Operator controlled.**
 
-Sentinel is the Python application being developed as part of **Project Sentinel**: an experimental cybersecurity assistant designed to support penetration testing, security research and learning without removing the human operator from the decision-making process.
+Sentinel is an experimental local cybersecurity workflow and knowledge assistant designed to support penetration testing, security research and learning while keeping the human operator in control.
 
-Rather than building an autonomous security agent and attempting to constrain it afterwards, Sentinel starts from the opposite assumption:
+It is the software implementation developed as part of **Project Sentinel**.
 
-> **AI may reason, recommend and assist — but authority belongs to the operator.**
+Rather than treating an AI model as the application, Sentinel treats reasoning as one bounded capability within a wider system responsible for session state, knowledge retrieval, context management, policy, execution and operator control.
 
-The application separates reasoning from execution through explicit state, policy, operator approval and capability boundaries.
+The long-term goal is not to build an autonomous penetration-testing agent.
 
-Potentially consequential actions should be inspectable, explainable and subject to operator control before they reach executable behaviour.
-
-Sentinel is currently deliberately small. Phase 0 established the control architecture that future AI reasoning and security capabilities will operate within.
-
----
-
-## Project Sentinel and Sentinel
-
-**Project Sentinel** is the wider engineering project.
-
-It contains the vision, requirements, architecture, Architectural Decision Records, roadmap, development history, test records and supporting knowledge that define how Sentinel should evolve.
-
-**Sentinel** is the Python software produced by that project.
-
-This repository contains the executable application prototype and its automated tests.
-
-Detailed engineering documentation is maintained separately in the:
-
-[Project Sentinel Vault](https://github.com/ItsNotMe9942/Project-Sentinel-Vault)
-
----
-
-## Architecture
-
-![Sentinel Architecture](docs/images/sentinel-architecture.png)
-
-The diagram above represents the **completed Phase 0.2 architecture**.
-
-It shows the successful control flow, the state-update path, the major failure paths and the boundaries that future capabilities must operate behind.
-
-The successful control flow is:
-
-```text
-Raw Operator Input
-        |
-        v
-Observation Parser
-        |
-        v
-Structured Observation
-        |
-        v
-Engagement State
-        |
-        v
-Rule-Based Planner
-        |
-        v
-Proposed Action
-        |
-        v
-Policy Engine
-        |
-        v
-Operator Approval
-        |
-        v
-Capability Registry
-        |
-        v
-Registered Capability
-        |
-        v
-Execution
-        |
-        v
-Updated Engagement State
-```
-
-The separation is deliberate:
+The goal is to build a system that understands the operator's current engagement, retrieves useful knowledge at the right time, preserves reasoning and evidence, assists with repeatable workflows and reduces the cognitive overhead surrounding technical work.
 
 > **A recommendation is not authority to execute.**
-
-For an action to reach execution it must:
-
-1. pass policy;
-2. receive operator approval where required;
-3. resolve to an explicitly registered capability.
-
-Failure at any of those boundaries prevents execution.
-
-A policy-denied action is blocked.
-
-An operator-declined action does not execute.
-
-An action without a matching registered capability is unavailable and does not execute.
-
-The planner therefore proposes behaviour but does not possess execution authority.
-
----
-
-## Why Sentinel?
-
-Modern AI systems can generate commands, analyse output and propose attack paths remarkably well.
-
-Capability alone is not enough for a system operating around security tooling.
-
-A useful cybersecurity assistant also needs to answer harder questions:
-
-- What is it actually allowed to do?
-- What information may leave the local environment?
-- Which actions require explicit operator approval?
-- What does the system know, and where did that knowledge come from?
-- How should uncertainty be represented?
-- Which capabilities are actually available for execution?
-- How do we prevent persuasive model output from becoming authority?
-- How do we preserve the operator's opportunity to think, learn and disagree?
-
-Sentinel treats those questions as architectural concerns rather than features to bolt on afterwards.
-
-Over time, Sentinel should also reduce the cognitive overhead surrounding technical work by helping maintain engagement context, surface relevant knowledge and methodology, organise evidence and support documentation.
 
 ---
 
 ## Current Status
 
-**Phase 0 — Agent Runtime Prototype is complete at prototype level.**
+Sentinel has reached its first **usable local CLI milestone**.
 
-### Phase 0.1 — Minimal Control Loop
+The current implementation provides an end-to-end path from operator interaction through session state and vault retrieval to a real locally hosted language model.
 
-Phase 0.1 established the first complete deterministic control path:
+The current automated regression baseline is:
 
-- engagement state;
-- proposed actions;
+```text
+107 tests
+107 passed
+```
+
+The first successful live end-to-end session has also been completed using a locally hosted **Qwen3 1.7B** model through `llama.cpp`.
+
+The system remains an early prototype.
+
+The emphasis at this stage is architectural correctness, explicit boundaries and useful workflow behaviour rather than UI polish, autonomous tooling or model sophistication.
+
+---
+
+## What Works Today
+
+The current Sentinel implementation includes:
+
+- structured engagement state;
+- explicit session target, objective and phase;
+- operator observations;
 - deterministic planning;
 - policy evaluation;
 - explicit operator approval;
-- simulated execution;
-- completed-action recording;
-- automated regression testing.
+- capability registration and bounded execution;
+- provider-independent model access;
+- read-only Obsidian vault access;
+- bounded vault retrieval;
+- context construction and budgeting;
+- session-aware reasoning;
+- a local `llama.cpp` reasoning provider;
+- an interactive command-line interface;
+- automated regression tests.
 
-### Phase 0.2 — Structured State and Capability Registry
-
-Phase 0.2 strengthened that foundation by introducing:
-
-- structured engagement observations;
-- a dedicated raw-input parsing boundary;
-- structured service, port and protocol metadata;
-- preservation of free-form observations without inventing structure;
-- deterministic planning over structured engagement state;
-- independent policy evaluation;
-- explicit operator approval;
-- explicitly registered bounded capabilities;
-- separation of capability-specific behaviour from the Agent Runtime;
-- refusal to execute unavailable capabilities;
-- recording of completed actions only after capability resolution and execution;
-- dependency injection of the capability registry for isolated testing;
-- operation of the Agent Runtime independently of any reasoning model.
-
-The complete automated regression suite currently passes:
-
-> **22/22 tests**
-
-The primary execution paths have also been verified manually through the command-line interface.
-
-The Phase 0 completion review found no blocking architectural issues.
-
-Sentinel is therefore ready to proceed into the **Foundation Release**.
-
----
-
-## Structured Observations
-
-Earlier versions of Sentinel represented observations as raw strings.
-
-Phase 0.2 introduced a structured `Observation` model.
-
-For example:
-
-```python
-Observation(
-    description="80/tcp open http",
-    service="http",
-    port=80,
-    protocol="tcp",
-)
-```
-
-Raw operator input is processed by `observation_parser.py` before entering engagement state.
-
-The planner can therefore reason over explicit fields such as service, port and protocol rather than searching arbitrary human-readable text for keywords.
-
-Unknown but non-empty observations are preserved as description-only observations rather than being discarded or incorrectly classified.
-
-This establishes a clear boundary between raw input, interpretation, stored knowledge and planning.
-
----
-
-## Capability Registry
-
-Phase 0.2 introduced an explicit boundary between approved actions and executable behaviour.
-
-A `Capability` gives executable behaviour a stable name, description and callable handler.
-
-The `CapabilityRegistry` controls which capabilities are deliberately available to Sentinel.
-
-The current prototype registers two bounded simulated capabilities:
-
-- `enumerate_http`
-- `review_observations`
-
-If an action passes policy and receives operator approval but no matching capability is registered, Sentinel refuses to execute it.
-
-The action is not recorded as completed.
-
-This means that neither the current deterministic planner nor a future AI reasoning model gains execution authority merely by proposing the name of an action.
-
----
-
-## Repository Structure
+This creates the first complete local workflow:
 
 ```text
-Sentinel/
-├── actions.py
-├── capabilities.py
-├── capability_registry.py
-├── main.py
-├── observation_parser.py
-├── planner.py
-├── policy.py
-├── runtime.py
-├── state.py
-├── docs/
-│   └── images/
-│       └── sentinel-architecture.png
-└── tests/
+Operator
+   |
+   v
+Sentinel CLI
+   |
+   +----> Session State
+   |
+   +----> Vault Retrieval
+   |          |
+   |          v
+   |     Context Manager
+   |          |
+   +----------+
+   |
+   v
+Reasoning Service
+   |
+   v
+Model Gateway
+   |
+   v
+Local Model Provider
+   |
+   v
+llama.cpp
+   |
+   v
+Local Qwen3 Model
 ```
 
-The responsibilities are intentionally separated:
+The language model is deliberately not the centre of this architecture.
 
-- **State** records what Sentinel currently knows.
-- **Observation Parser** converts raw input into structured observations.
-- **Planner** proposes what should happen next.
-- **Policy Engine** determines whether an action may proceed.
-- **Operator Approval** preserves human authority.
-- **Capability Registry** determines whether approved behaviour is available.
-- **Capabilities** contain bounded executable behaviour.
-- **Agent Runtime** coordinates the control loop.
+Sentinel owns the workflow.
+
+The model receives bounded context assembled by Sentinel and returns reasoning within the boundaries Sentinel provides.
 
 ---
 
-## Running Sentinel
+# Architecture
 
-Activate the project's Python virtual environment and run:
+Sentinel is being developed as a collection of explicit architectural boundaries rather than as a monolithic AI agent.
+
+## Engagement State
+
+Sentinel maintains structured state representing the current engagement.
+
+Current session information includes:
+
+- target;
+- objective;
+- phase;
+- observations;
+- findings;
+- completed actions;
+- evidence.
+
+This state exists independently of the language model.
+
+The model does not own Sentinel's memory or engagement state.
+
+---
+
+## Session Layer
+
+`session.py` provides the operator-facing session abstraction.
+
+The session layer gives the CLI and reasoning pipeline a coherent representation of the current working engagement.
+
+At the current stage, session state exists for the lifetime of the running Sentinel process.
+
+Persistent engagement storage and session resumption are future capabilities.
+
+---
+
+## Obsidian Vault Adapter
+
+The vault adapter provides a controlled, read-only boundary between Sentinel and an Obsidian knowledge base.
+
+Sentinel can:
+
+- discover Markdown notes;
+- search vault content;
+- retrieve individual notes;
+- resolve relevant internal links;
+- reject paths outside the configured vault.
+
+The adapter is deliberately read-only.
+
+The reasoning model does not receive unrestricted filesystem access.
+
+---
+
+## Context Manager
+
+The context manager determines what retrieved information should actually be presented to the reasoning system.
+
+It currently supports:
+
+- retrieval from natural-language queries;
+- multiple matching notes;
+- directly linked note inclusion;
+- duplicate prevention;
+- unresolved-link tracking;
+- bounded note counts;
+- hard context-size budgeting.
+
+The context manager exists because retrieving information and presenting information to a model are separate problems.
+
+Sentinel should not simply dump the contents of the knowledge base into the model context window.
+
+---
+
+## Reasoning Service
+
+The reasoning service coordinates:
+
+```text
+Operator question
+Session state
+Vault retrieval
+Context construction
+Model reasoning
+```
+
+It builds the bounded reasoning request supplied to the Model Gateway.
+
+Current engagement information such as the target, objective, phase and observations is included in the reasoning path so that responses can be grounded in both:
+
+1. what Sentinel knows from the knowledge base; and
+2. what the operator is currently doing.
+
+---
+
+## Model Gateway
+
+The Model Gateway separates Sentinel from any specific language-model implementation.
+
+Higher-level Sentinel components communicate with the gateway rather than directly with `llama.cpp`, Qwen or another provider.
+
+This allows reasoning providers to change without requiring the rest of Sentinel to be redesigned.
+
+The current real provider is:
+
+```text
+Sentinel
+   |
+Model Gateway
+   |
+llama.cpp Provider
+   |
+llama-server
+   |
+Qwen3 1.7B
+```
+
+Future local or external reasoning providers can sit behind the same architectural boundary.
+
+---
+
+## Local Reasoning Provider
+
+`llama_cpp_provider.py` implements Sentinel's first real model provider.
+
+It communicates with a locally running `llama-server` using its OpenAI-compatible HTTP interface.
+
+The provider is intentionally isolated from higher-level workflow logic.
+
+The current proving model is:
+
+```text
+ggml-org/Qwen3-1.7B-GGUF:Q4_K_M
+```
+
+Qwen3 1.7B is not intended to define Sentinel's long-term reasoning capability.
+
+It currently exists to prove that the architecture can successfully connect:
+
+```text
+CLI
+Session
+Vault
+Context Manager
+Reasoning Service
+Model Gateway
+Local Provider
+Real Local Model
+```
+
+without making the model itself responsible for the wider system.
+
+---
+
+# Command-Line Interface
+
+Sentinel currently provides a lightweight interactive CLI.
+
+Start Sentinel with:
 
 ```bash
-python3 main.py
+python3 sentinel_cli.py
+```
+
+The interface provides explicit commands for state-changing operations while ordinary text can be used for reasoning questions.
+
+This distinction is intentional.
+
+Explicit commands modify Sentinel state.
+
+Natural-language questions request reasoning.
+
+---
+
+## Current Commands
+
+### Set target
+
+```text
+/target <target>
 ```
 
 Example:
 
 ```text
-Project Sentinel — Phase 0.2: Structured State and Capability Registry
-Target: 10.10.10.10
-
-Paste one observation.
-Example: 80/tcp open http
-> 80/tcp open http
+/target 10.10.10.10
 ```
 
-For an HTTP observation, the current deterministic planner can propose `enumerate_http`.
-
-Policy evaluates the proposed action and requires operator approval before the registered simulated capability can execute.
-
-A successful approved path currently resembles:
+### Set objective
 
 ```text
---- Sentinel Decision ---
-Target: 10.10.10.10
-Phase: enumeration
-Action: enumerate_http
-Reason: An HTTP service has been observed and has not yet been enumerated.
-Policy: require_approval
-Policy reason: Operator approval is required before simulated execution.
-Approve this action? [y/N]: y
-[SIMULATED] Enumerating HTTP for target: 10.10.10.10
-Action recorded.
+/objective <objective>
+```
+
+Example:
+
+```text
+/objective web enumeration
+```
+
+### Set phase
+
+```text
+/phase <phase>
+```
+
+Example:
+
+```text
+/phase enumeration
+```
+
+### Record observation
+
+```text
+/observe <observation>
+```
+
+Example:
+
+```text
+/observe 80/tcp open http
+```
+
+### Display session state
+
+```text
+/status
+```
+
+### Search the configured vault
+
+```text
+/search <query>
+```
+
+### Open a vault note
+
+```text
+/open <relative path>
+```
+
+### Ask a reasoning question
+
+```text
+/ask <question>
+```
+
+Ordinary text is also interpreted as a reasoning question.
+
+For example:
+
+```text
+Given my current session and the knowledge in my vault, what should I focus on next?
+```
+
+### Help
+
+```text
+/help
+```
+
+### Exit
+
+```text
+/quit
+```
+
+or:
+
+```text
+/exit
 ```
 
 ---
 
-## Testing
+# Running the Local Model
 
-Run the complete regression suite with:
+Sentinel's current local reasoning provider expects a `llama-server` instance on localhost.
+
+The current proving configuration is:
 
 ```bash
-python3 -m unittest discover -s tests -v
+llama-server \
+  -hf ggml-org/Qwen3-1.7B-GGUF:Q4_K_M \
+  -c 8192 \
+  --reasoning off \
+  --host 127.0.0.1 \
+  --port 8080
 ```
 
-Current verified baseline:
+This starts the local model server at:
 
 ```text
-Ran 22 tests
+127.0.0.1:8080
+```
 
+The server should remain running in its own terminal while Sentinel is used from another terminal.
+
+For example:
+
+```text
+Terminal 1
+llama-server
+
+Terminal 2
+Sentinel CLI
+
+Terminal 3
+Operator tools / lab work
+```
+
+The current configuration deliberately binds the model server to localhost rather than exposing it across the network.
+
+---
+
+# Configuring the Vault
+
+Sentinel currently obtains its Obsidian vault location from the configured environment path used by the application.
+
+The vault is treated as an external knowledge source rather than part of the Sentinel software repository.
+
+This separation is intentional.
+
+```text
+Sentinel software repository
+        |
+        | read-only retrieval
+        v
+Obsidian knowledge vault
+```
+
+The current development environment uses the **Project Sentinel Vault** as the initial proving knowledge base.
+
+Broader integration with the operator's wider Obsidian knowledge base is planned as the retrieval architecture develops.
+
+---
+
+# Example Session
+
+A minimal current session looks like:
+
+```text
+$ python3 sentinel_cli.py
+
+Project Sentinel
+Local workflow and knowledge assistant
+Type /help for commands.
+
+Sentinel> /target 10.10.10.10
+Target set: 10.10.10.10
+
+Sentinel> /objective web enumeration
+Objective set: web enumeration
+
+Sentinel> /phase enumeration
+Phase set: enumeration
+
+Sentinel> /observe 80/tcp open http
+Observation recorded: 80/tcp open http
+
+Sentinel> /observe The login page appears to be custom-built
+Observation recorded: The login page appears to be custom-built
+
+Sentinel> /status
+
+Current session
+Target: 10.10.10.10
+Objective: web enumeration
+Phase: enumeration
+
+Observations:
+- 80/tcp open http
+- The login page appears to be custom-built
+
+Findings:
+- None
+
+Completed actions:
+- None
+
+Evidence:
+- None
+```
+
+A natural-language question can then use both the active session and retrieved vault context:
+
+```text
+Sentinel> Given my current session and the knowledge in my vault, what should I focus on next?
+```
+
+Sentinel retrieves bounded relevant knowledge, combines it with the current session and sends the resulting context through the Model Gateway to the configured reasoning provider.
+
+---
+
+# Context Is Bounded
+
+One of the first live integration tests exposed an important architectural requirement.
+
+Initial end-to-end requests exceeded the model's available context window because retrieved vault notes could collectively produce requests larger than the configured model context.
+
+The solution was not simply to increase the model context window.
+
+Sentinel now enforces a context budget before information reaches the reasoning provider.
+
+This establishes an important principle:
+
+> **The Context Manager decides what the model needs to see.**
+
+The model's context window is a limited computational resource, not a storage mechanism.
+
+As Sentinel develops, context selection should become increasingly intelligent while remaining bounded and inspectable.
+
+---
+
+# Control Model
+
+Sentinel separates reasoning from execution.
+
+A reasoning system may recommend an action, but that recommendation does not itself authorize execution.
+
+The intended control path is:
+
+```text
+Reasoning
+   |
+   v
+Proposed Action
+   |
+   v
+Policy Evaluation
+   |
+   v
+Operator Approval
+   |
+   v
+Capability Resolution
+   |
+   v
+Execution
+```
+
+For an executable action to proceed, it must satisfy the relevant policy requirements, receive operator approval where required and resolve to an explicitly registered capability.
+
+This principle predates the local LLM integration and remains authoritative as Sentinel's reasoning capability grows.
+
+---
+
+# Human-Led, AI-Assisted
+
+Sentinel is not intended to replace the operator's understanding of penetration testing.
+
+The system should instead help the operator maintain:
+
+- situational awareness;
+- engagement context;
+- methodology;
+- observations;
+- evidence;
+- hypotheses;
+- reasoning;
+- documentation;
+- workflow continuity.
+
+The operator should remain responsible for understanding the target, interpreting evidence and making decisions.
+
+Sentinel exists to reduce the surrounding cognitive and organisational overhead.
+
+---
+
+# Current Limitations
+
+The current implementation is intentionally limited.
+
+Notable limitations include:
+
+- session state is not yet persisted between CLI runs;
+- the current local model is small and primarily proves the provider architecture;
+- retrieval is still relatively simple;
+- context relevance is not yet deeply ranked or weighted;
+- the current proving vault is narrower than the intended long-term knowledge base;
+- observations are manually entered;
+- voice capture is not yet implemented;
+- engagement write-up generation is not yet implemented;
+- no graphical interface is required at this stage;
+- autonomous penetration-testing behaviour is not a project objective.
+
+These limitations are expected at the current stage.
+
+The priority is to establish a useful and trustworthy foundation before adding higher-level capabilities.
+
+---
+
+# Near-Term Direction
+
+The next stages of Sentinel development will build on the working CLI rather than replacing it.
+
+Likely areas of development include:
+
+- stronger retrieval relevance;
+- richer engagement state;
+- engagement persistence and resumption;
+- methodology and SOP retrieval;
+- findings and evidence workflows;
+- write-up and reporting templates;
+- improved context selection;
+- broader Obsidian knowledge integration;
+- capture of operator reasoning during an engagement;
+- eventual voice input where it improves workflow.
+
+Voice interaction is intended primarily as a capture mechanism rather than a cosmetic interface feature.
+
+A future operator should be able to verbalise observations and reasoning during technical work so that Sentinel can preserve useful engagement context without requiring retrospective reconstruction.
+
+---
+
+# Testing
+
+Run the complete test suite with:
+
+```bash
+python3 -m unittest discover -v
+```
+
+Current baseline:
+
+```text
+Ran 107 tests
 OK
 ```
 
-> **Phase 0 regression baseline: 22/22 tests passing.**
+The regression suite covers the existing architectural boundaries including:
 
-Automated coverage currently verifies behaviour across:
-
-- capability registration;
-- capability resolution;
-- duplicate capability rejection;
-- unavailable capability rejection;
-- registered handler execution;
-- structured engagement state;
+- engagement state;
 - observation parsing;
-- structured service metadata;
-- preservation of free-form observations;
-- empty-observation rejection;
-- planner behaviour;
-- prevention of repeated HTTP enumeration;
-- planner fallback behaviour;
-- policy scope enforcement;
-- operator approval requirements;
-- approved runtime execution;
-- operator-declined actions;
-- policy-denied actions;
-- completed-action recording;
-- CLI integration.
+- planning;
+- policy;
+- approval;
+- capability execution;
+- Model Gateway behaviour;
+- vault access;
+- context management;
+- reasoning coordination;
+- session behaviour;
+- CLI behaviour;
+- `llama.cpp` provider behaviour.
 
-The approval, decline, policy-denial and registered-capability execution paths have also been exercised manually.
+Maintaining a green regression baseline is a requirement as Sentinel develops.
 
 ---
 
-## What Sentinel Does Not Do Yet
+# Development Philosophy
 
-Phase 0 deliberately proved the control architecture before introducing significant intelligence or offensive capability.
+Sentinel is being built incrementally.
 
-The current prototype does **not yet** provide:
+Each development step should:
 
-- model-driven reasoning;
-- real security-tool execution;
-- dynamic plugin discovery;
-- persistent long-term engagement memory;
-- vault retrieval;
-- Frontier reasoning;
-- autonomous offensive execution.
+1. introduce one understandable capability;
+2. preserve existing architectural boundaries;
+3. include automated tests;
+4. be exercised manually where appropriate;
+5. be documented alongside the implementation;
+6. leave the repository in a coherent working state.
 
-It also does not give the current planner or a future reasoning model direct access to security tools.
+The project deliberately favours a small working system over a large speculative architecture.
 
-These are deliberately deferred capabilities rather than incomplete Phase 0 requirements.
-
-They will be introduced incrementally behind the control boundaries established during Phase 0.
+Capabilities should be added because they improve the operator's real workflow, not simply because they are technically possible.
 
 ---
 
-## Beyond Phase 0
+# Project Sentinel
 
-The completed Phase 0 control architecture is intended to support future capabilities without transferring ownership of policy, state or execution to those capabilities.
+This repository contains the **Sentinel application**.
 
-Planned areas include:
+The wider **Project Sentinel** documentation is maintained separately in an Obsidian vault and records:
 
-- AI reasoning providers;
-- vault and knowledge retrieval;
-- memory and continuity;
-- tool and plugin integration;
-- Frontier reasoning with controlled egress.
+- project vision;
+- requirements;
+- architecture;
+- Architectural Decision Records;
+- roadmap;
+- development history;
+- test records;
+- hardware planning;
+- security boundaries;
+- Standard Operating Procedures;
+- future capability design.
 
-The accepted Project Sentinel architecture defines three logical reasoning tiers:
+The software and documentation repositories remain separate intentionally.
 
-- **Local Fast**
-- **Local Reasoning**
-- **Frontier** — optional and explicitly controlled.
+The software repository records **what Sentinel does**.
 
-These reasoning providers are intended to sit behind stable interfaces rather than owning state, policy or execution.
-
-The Phase 0 principle remains:
-
-> **Sentinel controls state, policy and execution independently of whichever reasoning model is attached.**
+The Project Sentinel Vault records **why Sentinel is being built that way**.
 
 ---
 
-## Development Approach
+## Current Milestone
 
-Sentinel is developed through small, understandable and testable increments:
+**Foundation 0.3 — First Usable Local Sentinel CLI**
+
+Current verified path:
 
 ```text
-Design
-  |
-  v
-Document
-  |
-  v
-Implement
-  |
-  v
-Test
-  |
-  v
-Review
-  |
-  v
-Grow
+Operator
+   |
+   v
+CLI
+   |
+   +---- Session State
+   |
+   +---- Obsidian Retrieval
+              |
+              v
+        Context Manager
+              |
+              v
+       Reasoning Service
+              |
+              v
+         Model Gateway
+              |
+              v
+      llama.cpp Provider
+              |
+              v
+       Local Qwen3 Model
 ```
 
-The objective is not to maximise capability as quickly as possible.
+**Regression baseline: 107 / 107 tests passing.**
 
-The objective is to ensure that Sentinel remains understandable, testable and operator-controlled as its capabilities grow.
+The foundation is now capable of supporting a real operator session.
 
----
-
-## What's Next?
-
-With Phase 0 complete, development can proceed into the **Foundation Release**.
-
-The Foundation Release will begin introducing real intelligence around the proven runtime rather than replacing its control architecture.
-
-Planned areas include:
-
-- the first real reasoning-model provider;
-- vault and knowledge retrieval;
-- context management;
-- persistent continuity;
-- further evolution of structured engagement state.
-
-These capabilities will be introduced behind the boundaries already established during Phase 0.
-
-The fundamental constraint remains unchanged:
-
-> **Models may reason and propose. Sentinel controls whether anything happens.**
-
----
-
-## Project Documentation
-
-Detailed architectural reasoning, requirements, ADRs, roadmap material, development history and test records are maintained in the:
-
-[Project Sentinel Vault](https://github.com/ItsNotMe9942/Project-Sentinel-Vault)
-
-This keeps the Sentinel repository focused on executable software while preserving the reasoning and engineering history behind it.
-
----
-
-## Project Status
-
-**Project Sentinel:** Active development
-**Sentinel application:** Phase 0 complete at prototype level
-**Phase 0.2:** Verified complete
-**Automated regression baseline:** 22/22 tests passing
-**Phase 0 completion review:** Passed
-**Next major milestone:** Foundation Release
-
----
-
-Sentinel is deliberately small today.
-
-The architecture has been established first so that future capability can be added **within known boundaries rather than becoming the boundary itself**.
+The next objective is to make that session progressively more useful.

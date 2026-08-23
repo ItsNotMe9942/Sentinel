@@ -12,6 +12,7 @@ from reasoning_service import (
     ReasoningResult,
     ReasoningService,
 )
+from session import SentinelSession
 from vault_adapter import VaultAdapter
 
 
@@ -40,6 +41,7 @@ class ReasoningServiceTests(unittest.TestCase):
         self.vault_path = Path(self.temp_dir.name)
 
         self.adapter = VaultAdapter(self.vault_path)
+
         self.context_manager = ContextManager(
             self.adapter
         )
@@ -47,9 +49,12 @@ class ReasoningServiceTests(unittest.TestCase):
         self.provider = FakeProvider()
         self.gateway = ModelGateway(self.provider)
 
+        self.session = SentinelSession()
+
         self.service = ReasoningService(
             self.context_manager,
             self.gateway,
+            session=self.session,
         )
 
     def tearDown(self):
@@ -90,8 +95,30 @@ class ReasoningServiceTests(unittest.TestCase):
             ["Lab.md"],
         )
 
+    def test_returns_session_snapshot_with_response(self):
+        self.session.set_target("10.10.10.10")
+        self.session.set_objective(
+            "Web enumeration"
+        )
+
+        result = self.service.ask("Proxmox")
+
+        self.assertIsNotNone(result.session)
+
+        self.assertEqual(
+            result.session.target,
+            "10.10.10.10",
+        )
+
+        self.assertEqual(
+            result.session.objective,
+            "Web enumeration",
+        )
+
     def test_prompt_contains_operator_query(self):
-        self.service.ask("How is Proxmox configured?")
+        self.service.ask(
+            "How is Proxmox configured?"
+        )
 
         self.assertIsNotNone(
             self.provider.last_request
@@ -105,6 +132,64 @@ class ReasoningServiceTests(unittest.TestCase):
         self.assertIn(
             "How is Proxmox configured?",
             self.provider.last_request.prompt,
+        )
+
+    def test_prompt_contains_current_session_state(self):
+        self.session.set_target(
+            "10.10.10.10"
+        )
+        self.session.set_objective(
+            "Web enumeration"
+        )
+        self.session.set_phase(
+            "enumeration"
+        )
+
+        self.session.record_observation(
+            "80/tcp open http"
+        )
+
+        self.session.record_observation(
+            "The login page appears to be custom-built"
+        )
+
+        self.service.ask(
+            "What should I focus on next?"
+        )
+
+        prompt = self.provider.last_request.prompt
+
+        self.assertIn(
+            "CURRENT SESSION",
+            prompt,
+        )
+
+        self.assertIn(
+            "Target: 10.10.10.10",
+            prompt,
+        )
+
+        self.assertIn(
+            "Objective: Web enumeration",
+            prompt,
+        )
+
+        self.assertIn(
+            "Phase: enumeration",
+            prompt,
+        )
+
+        self.assertIn(
+            "- 80/tcp open http",
+            prompt,
+        )
+
+        self.assertIn(
+            (
+                "- The login page appears "
+                "to be custom-built"
+            ),
+            prompt,
         )
 
     def test_prompt_contains_retrieved_note_and_source(self):
@@ -125,6 +210,11 @@ class ReasoningServiceTests(unittest.TestCase):
         self.service.ask("Proxmox")
 
         prompt = self.provider.last_request.prompt
+
+        self.assertIn(
+            "RETRIEVED KNOWLEDGE",
+            prompt,
+        )
 
         self.assertIn(
             "SOURCE: Lab/Architecture.md",
