@@ -16,6 +16,12 @@ The goal is to build a system that understands the operator's current engagement
 
 ---
 
+## Current Architecture
+
+![Sentinel Architecture](docs/images/sentinel-architecture.png)
+
+---
+
 ## Current Status
 
 Sentinel has reached its first **usable local CLI milestone**.
