@@ -137,6 +137,210 @@ class VaultAdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.adapter.search_notes("   ")
 
+    def test_search_matches_note_path(self):
+        lab_path = self.vault_path / "Lab"
+        lab_path.mkdir()
+
+        hardware_path = lab_path / "Hardware Inventory.md"
+        hardware_path.write_text(
+            "# Inventory\n\nCurrent physical systems.",
+            encoding="utf-8",
+        )
+
+        results = self.adapter.search_notes("hardware inventory")
+
+        self.assertEqual(
+            results,
+            [
+                VaultNote(
+                    path="Lab/Hardware Inventory.md",
+                    content="# Inventory\n\nCurrent physical systems.",
+                )
+            ],
+        )
+
+    def test_resolves_wikilink_to_nested_note(self):
+        lab_path = self.vault_path / "Lab"
+        lab_path.mkdir()
+
+        architecture_path = lab_path / "Lab Architecture.md"
+        architecture_path.write_text(
+            "# Lab Architecture\n\nThe OptiPlex is the Proxmox host.",
+            encoding="utf-8",
+        )
+
+        note = self.adapter.resolve_wikilink("Lab Architecture")
+
+        self.assertEqual(
+            note,
+            VaultNote(
+                path="Lab/Lab Architecture.md",
+                content="# Lab Architecture\n\nThe OptiPlex is the Proxmox host.",
+            ),
+        )
+
+    def test_rejects_ambiguous_wikilink(self):
+        lab_path = self.vault_path / "Lab"
+        lab_path.mkdir()
+
+        sentinel_path = self.vault_path / "Project Sentinel"
+        sentinel_path.mkdir()
+
+        lab_architecture = lab_path / "Architecture.md"
+        lab_architecture.write_text(
+            "# Architecture\n\nLab architecture.",
+            encoding="utf-8",
+        )
+
+        sentinel_architecture = sentinel_path / "Architecture.md"
+        sentinel_architecture.write_text(
+            "# Architecture\n\nSentinel architecture.",
+            encoding="utf-8",
+        )
+
+        with self.assertRaises(ValueError):
+            self.adapter.resolve_wikilink("Architecture")
+
+    def test_resolves_explicit_path_wikilink(self):
+        lab_path = self.vault_path / "Lab"
+        lab_path.mkdir()
+
+        sentinel_path = self.vault_path / "Project Sentinel"
+        sentinel_path.mkdir()
+
+        lab_architecture = lab_path / "Architecture.md"
+        lab_architecture.write_text(
+            "# Architecture\n\nLab architecture.",
+            encoding="utf-8",
+        )
+
+        sentinel_architecture = sentinel_path / "Architecture.md"
+        sentinel_architecture.write_text(
+            "# Architecture\n\nSentinel architecture.",
+            encoding="utf-8",
+        )
+
+        note = self.adapter.resolve_wikilink("Lab/Architecture")
+
+        self.assertEqual(
+            note,
+            VaultNote(
+                path="Lab/Architecture.md",
+                content="# Architecture\n\nLab architecture.",
+            ),
+        )
+
+    def test_missing_wikilink_raises_file_not_found_error(self):
+        with self.assertRaises(FileNotFoundError):
+            self.adapter.resolve_wikilink("Missing Note")
+
+    def test_rejects_empty_wikilink(self):
+        with self.assertRaises(ValueError):
+            self.adapter.resolve_wikilink("   ")
+
+    def test_resolves_wikilink_alias_to_note(self):
+        lab_path = self.vault_path / "Lab"
+        lab_path.mkdir()
+
+        architecture_path = lab_path / "Architecture.md"
+        architecture_path.write_text(
+            "# Architecture\n\nLab architecture.",
+            encoding="utf-8",
+        )
+
+        note = self.adapter.resolve_wikilink(
+            "Architecture|lab design"
+        )
+
+        self.assertEqual(
+            note,
+            VaultNote(
+                path="Lab/Architecture.md",
+                content="# Architecture\n\nLab architecture.",
+            ),
+        )
+
+    def test_resolves_heading_wikilink_to_note(self):
+        lab_path = self.vault_path / "Lab"
+        lab_path.mkdir()
+
+        architecture_path = lab_path / "Architecture.md"
+        architecture_path.write_text(
+            "# Architecture\n\n## Networking\n\nNetwork design.",
+            encoding="utf-8",
+        )
+
+        note = self.adapter.resolve_wikilink(
+            "Architecture#Networking"
+        )
+
+        self.assertEqual(
+            note,
+            VaultNote(
+                path="Lab/Architecture.md",
+                content=(
+                    "# Architecture\n\n"
+                    "## Networking\n\n"
+                    "Network design."
+                ),
+            ),
+        )
+
+    def test_extracts_wikilinks_from_note(self):
+        note = VaultNote(
+            path="Overview.md",
+            content=(
+                "# Overview\n\n"
+                "See [[Lab/Architecture]] for the lab design and "
+                "[[Hardware Inventory]] for available hardware."
+            ),
+        )
+
+        links = self.adapter.extract_wikilinks(note)
+
+        self.assertEqual(
+            links,
+            [
+                "Lab/Architecture",
+                "Hardware Inventory",
+            ],
+        )
+
+    def test_extracts_normalised_wikilinks(self):
+        note = VaultNote(
+            path="Overview.md",
+            content=(
+                "See [[Lab/Architecture#Networking|network design]] "
+                "and [[Hardware Inventory|hardware]]."
+            ),
+        )
+
+        links = self.adapter.extract_wikilinks(note)
+
+        self.assertEqual(
+            links,
+            [
+                "Lab/Architecture",
+                "Hardware Inventory",
+            ],
+        )
+
+    def test_extracts_each_wikilink_once(self):
+        note = VaultNote(
+            path="Overview.md",
+            content=(
+                "[[Architecture]] is important. "
+                "See [[Architecture]] again."
+            ),
+        )
+
+        links = self.adapter.extract_wikilinks(note)
+
+        self.assertEqual(
+            links,
+            ["Architecture"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
