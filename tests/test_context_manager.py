@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from context_manager import ContextManager, WorkingContext
+from session import SentinelSession
 from vault_adapter import VaultAdapter, VaultNote
 
 
@@ -405,6 +406,169 @@ class ContextManagerTests(unittest.TestCase):
                 self.adapter,
                 max_context_chars=0,
             )
+
+    def test_session_objective_contributes_to_retrieval(self):
+        operational_path = (
+            self.vault_path / "Knowledge"
+        )
+        operational_path.mkdir()
+
+        (
+            operational_path / "Web Enumeration.md"
+        ).write_text(
+            (
+                "# Web Enumeration\n\n"
+                "Inspect HTTP services, routes and login forms."
+            ),
+            encoding="utf-8",
+        )
+
+        manager = ContextManager(self.adapter)
+
+        session = SentinelSession()
+        session.set_objective("web enumeration")
+
+        context = manager.build_context(
+            "What should I investigate next?",
+            session_status=session.status(),
+        )
+
+        self.assertEqual(
+            [note.path for note in context.notes],
+            ["Knowledge/Web Enumeration.md"],
+        )
+
+    def test_session_observation_contributes_to_retrieval(self):
+        knowledge_path = self.vault_path / "Knowledge"
+        knowledge_path.mkdir()
+
+        (
+            knowledge_path / "HTTP.md"
+        ).write_text(
+            (
+                "# HTTP\n\n"
+                "HTTP enumeration should inspect headers, "
+                "routes and application behaviour."
+            ),
+            encoding="utf-8",
+        )
+
+        manager = ContextManager(self.adapter)
+
+        session = SentinelSession()
+        session.record_observation(
+            "80/tcp open http"
+        )
+
+        context = manager.build_context(
+            "What should I investigate next?",
+            session_status=session.status(),
+        )
+
+        self.assertEqual(
+            [note.path for note in context.notes],
+            ["Knowledge/HTTP.md"],
+        )
+
+    def test_operational_note_outranks_generic_project_note(
+        self,
+    ):
+        knowledge_path = self.vault_path / "Knowledge"
+        project_path = (
+            self.vault_path / "Project Sentinel"
+        )
+
+        knowledge_path.mkdir()
+        project_path.mkdir()
+
+        (
+            knowledge_path / "Web Enumeration.md"
+        ).write_text(
+            (
+                "# Web Enumeration\n\n"
+                "HTTP login enumeration methodology."
+            ),
+            encoding="utf-8",
+        )
+
+        (
+            project_path / "Foundation Release.md"
+        ).write_text(
+            (
+                "# Foundation Release\n\n"
+                "The current session supports web enumeration "
+                "and HTTP observations."
+            ),
+            encoding="utf-8",
+        )
+
+        manager = ContextManager(
+            self.adapter,
+            max_notes=2,
+        )
+
+        session = SentinelSession()
+        session.set_objective(
+            "web enumeration"
+        )
+        session.set_phase(
+            "enumeration"
+        )
+        session.record_observation(
+            "80/tcp open http"
+        )
+        session.record_observation(
+            "The login page appears to be custom-built"
+        )
+
+        context = manager.build_context(
+            "Given my current session, "
+            "what should I investigate next?",
+            session_status=session.status(),
+        )
+
+        self.assertEqual(
+            context.notes[0].path,
+            "Knowledge/Web Enumeration.md",
+        )
+
+    def test_path_match_outranks_content_only_match(self):
+        knowledge_path = self.vault_path / "Knowledge"
+        project_path = self.vault_path / "Project"
+
+        knowledge_path.mkdir()
+        project_path.mkdir()
+
+        (
+            knowledge_path / "Enumeration.md"
+        ).write_text(
+            "# Enumeration\n\nMethodology.",
+            encoding="utf-8",
+        )
+
+        (
+            project_path / "Roadmap.md"
+        ).write_text(
+            (
+                "# Roadmap\n\n"
+                "Enumeration is mentioned here."
+            ),
+            encoding="utf-8",
+        )
+
+        manager = ContextManager(
+            self.adapter,
+            max_notes=2,
+        )
+
+        context = manager.build_context(
+            "enumeration"
+        )
+
+        self.assertEqual(
+            context.notes[0].path,
+            "Knowledge/Enumeration.md",
+        )
 
 
 if __name__ == "__main__":

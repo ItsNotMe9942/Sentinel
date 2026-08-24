@@ -9,9 +9,9 @@ class LlamaCppProvider:
         self,
         model: str = "ggml-org/Qwen3-1.7B-GGUF:Q4_K_M",
         base_url: str = "http://127.0.0.1:8080",
-        timeout: int = 120,
+        timeout: int = 300,
         temperature: float = 0.2,
-        max_tokens: int = 512,
+        max_tokens: int = 1024,
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
@@ -63,6 +63,11 @@ class LlamaCppProvider:
             raise ConnectionError(
                 "Local reasoning provider returned "
                 f"HTTP {exc.code}."
+            ) from exc
+
+        except TimeoutError as exc:
+            raise ConnectionError(
+                "Local reasoning provider timed out."
             ) from exc
 
         except error.URLError as exc:

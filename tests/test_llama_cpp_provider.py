@@ -38,6 +38,14 @@ class LlamaCppProviderTests(unittest.TestCase):
             max_tokens=256,
         )
 
+    def test_default_max_tokens_is_1024(self):
+        provider = LlamaCppProvider()
+
+        self.assertEqual(
+            provider.max_tokens,
+            1024,
+        )
+
     @patch(
         "llama_cpp_provider.request.urlopen"
     )
@@ -308,6 +316,26 @@ class LlamaCppProviderTests(unittest.TestCase):
 
         with self.assertRaises(
             ValueError
+        ):
+            self.provider.generate(
+                ModelRequest(
+                    prompt="Question"
+                )
+            )
+
+    @patch(
+        "llama_cpp_provider.request.urlopen"
+    )
+    def test_timeout_raises_connection_error(
+        self,
+        mock_urlopen,
+    ):
+        mock_urlopen.side_effect = TimeoutError(
+            "timed out"
+        )
+
+        with self.assertRaises(
+            ConnectionError
         ):
             self.provider.generate(
                 ModelRequest(
