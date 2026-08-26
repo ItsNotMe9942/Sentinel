@@ -16,6 +16,24 @@ The goal is to build a system that understands the operator's current engagement
 
 ---
 
+## Development Transparency
+
+I originated Project Sentinel in response to practical problems I encountered while learning cybersecurity, using TryHackMe and developing my home lab.
+
+I have developed the project through extensive conversations with ChatGPT. OpenAI has played a leading role in translating my ideas, requirements and workflow into the architecture, documentation, Python implementation and automated tests contained in this repository.
+
+Substantial portions of the repository are AI-generated or AI-guided. I am not presenting it as software that I designed and wrote entirely without assistance.
+
+My role is to define the problems, priorities and intended outcomes; supply the operating context; question and review proposals; decide what is adopted; run and test the implementation; and develop my understanding throughout the process.
+
+I am documenting this publicly both for transparency and to demonstrate what a learner can achieve through clear prompts, sustained discussion, incremental development, testing and critical review of AI-generated work.
+
+This development history is separate from Sentinel’s **Human-Led, AI-Assisted** operating principle. When Sentinel is running, AI may assist and recommend, but authority over objectives, decisions and actions remains with me as the human operator.
+
+A complete account is maintained in the Project Sentinel Vault: [AI-Assisted Development and Authorship](https://github.com/ItsNotMe9942/Project-Sentinel-Vault/blob/main/00%20-%20Vision/AI-Assisted%20Development%20and%20Authorship.md).
+
+---
+
 ## Current Architecture
 
 ![Sentinel Architecture](docs/images/sentinel-architecture.png)
@@ -31,8 +49,8 @@ The current implementation provides an end-to-end path from operator interaction
 The current automated regression baseline is:
 
 ```text
-107 tests
-107 passed
+137 tests
+137 passed
 ```
 
 The first successful live end-to-end session has also been completed using a locally hosted **Qwen3 1.7B** model through `llama.cpp`.
@@ -625,13 +643,13 @@ A future operator should be able to verbalise observations and reasoning during 
 Run the complete test suite with:
 
 ```bash
-python3 -m unittest discover -v
+python3 -m unittest discover -s tests -v
 ```
 
 Current baseline:
 
 ```text
-Ran 107 tests
+Ran 137 tests
 OK
 ```
 
@@ -732,7 +750,7 @@ CLI
        Local Qwen3 Model
 ```
 
-**Regression baseline: 107 / 107 tests passing.**
+**Regression baseline: 137 / 137 tests passing.**
 
 The foundation is now capable of supporting a real operator session.
 

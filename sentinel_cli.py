@@ -10,6 +10,25 @@ from session import SentinelSession
 from vault_adapter import VaultAdapter
 
 
+BANNER = r"""
+                  /\         /\
+             ____/  \_______/  \____
+            /                       \
+           |      ◉           ◉      |
+            \          /\           /
+             \________/  \_________/
+                     \____/
+
+                 S E N T I N E L
+
+
+Project Sentinel
+Local workflow and knowledge assistant
+
+Type /help for commands.
+""".strip("\n")
+
+
 class SentinelCLI:
     def __init__(
         self,
@@ -26,9 +45,7 @@ class SentinelCLI:
         self.output_fn = output_fn
 
     def run(self) -> None:
-        self._write("Project Sentinel")
-        self._write("Local workflow and knowledge assistant")
-        self._write("Type /help for commands.")
+        self._write("\n\n\n" + BANNER)
 
         while True:
             try:
